@@ -1,15 +1,17 @@
-const User = require('../models/user');
-const bcrypt = require('bcrypt');
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const router = express.Router();
+import {Router} from 'express';
+import { genSalt, hash, compare } from 'bcrypt';
+import {sign} from 'jsonwebtoken';
+import {config} from 'dotenv';
+import User from '../models/user';
 
-const secretJWT = 'test';
+config(); // LOAD ENVS VARS
+const router = Router();
+const secretJWT = process.env.JWT_SECRET;
 
 const hashPassword = async (password) => {
     try {
-        const salt = await bcrypt.genSalt(10);
-        const newPassword = await bcrypt.hash(password, salt);
+        const salt = await genSalt(10);
+        const newPassword = await hash(password, salt);
         return newPassword;
     } catch (err) {
         console.log(err);
@@ -21,7 +23,6 @@ router.post('/login', async (req, res) => {
     const {email, password} = req.body;
     console.log(req.body)
     try {
-        // const hashedPassword = await hashPassword(password);
         const userFound = await User.findOne({email: email});
         if (!userFound) {
             return res.json({
@@ -31,7 +32,7 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        const passwordsAreEqual = await bcrypt.compare(password, userFound.password);
+        const passwordsAreEqual = await compare(password, userFound.password);
         if (!passwordsAreEqual) {
             return res.json({
                 status: 401,
@@ -41,7 +42,7 @@ router.post('/login', async (req, res) => {
         
     
         userFound.password = null;
-        const token = jwt.sign({userFound}, secretJWT);
+        const token = sign({userFound}, secretJWT);
         return res.json({
             status: 200,
             message: 'User found',
